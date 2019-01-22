@@ -27,6 +27,7 @@ import internal.librarymanagement._
 import librarymanagement._
 import sbt.dependencygraph.SbtAccess
 import sbt.dependencygraph.DependencyGraphSbtCompat.Implicits._
+import sbt.dependencygraph.DependencyGraphSbtCompat.Settings.asciiGraphMaxColumnWidth
 import sbt.complete.Parsers
 
 object DependencyGraphSettings {
@@ -50,7 +51,7 @@ object DependencyGraphSettings {
 
   val renderingAlternatives: Seq[(TaskKey[Unit], Def.Initialize[Task[ModuleGraph ⇒ String]])] =
     Seq(
-      dependencyTree -> Def.task(rendering.AsciiTree.asciiTree(_, asciiGraphWidth.value)),
+      dependencyTree -> Def.task(rendering.AsciiTree.asciiTree(_, asciiGraphMaxColumnWidth.value)),
       dependencyList -> Def.task(rendering.FlatList.render(_.id.idString)),
       dependencyStats -> Def.task(rendering.Statistics.renderModuleStatsList _),
       licenseInfo -> Def.task(rendering.LicenseInfo.render _))
@@ -107,7 +108,7 @@ object DependencyGraphSettings {
 
       whatDependsOn := {
         val ArtifactPattern(org, name, versionFilter) = artifactPatternParser.parsed
-        val maxColumnSize = asciiGraphWidth.value
+        val maxColumnSize = asciiGraphMaxColumnWidth.value
         val graph = moduleGraph.value
         val modules =
           versionFilter match {
