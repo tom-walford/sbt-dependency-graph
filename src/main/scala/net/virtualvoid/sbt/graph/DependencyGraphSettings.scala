@@ -48,12 +48,12 @@ object DependencyGraphSettings {
   def reportSettings =
     Seq(Compile, Test, IntegrationTest, Runtime, Provided, Optional).flatMap(ivyReportForConfig)
 
-  val renderingAlternatives: Seq[(TaskKey[Unit], ModuleGraph ⇒ String)] =
+  val renderingAlternatives: Seq[(TaskKey[Unit], Def.Initialize[Task[ModuleGraph ⇒ String]])] =
     Seq(
-      dependencyTree -> rendering.AsciiTree.asciiTree _,
-      dependencyList -> rendering.FlatList.render(_.id.idString),
-      dependencyStats -> rendering.Statistics.renderModuleStatsList _,
-      licenseInfo -> rendering.LicenseInfo.render _)
+      dependencyTree -> Def.task(rendering.AsciiTree.asciiTree(_, asciiGraphWidth.value)),
+      dependencyList -> Def.task(rendering.FlatList.render(_.id.idString)),
+      dependencyStats -> Def.task(rendering.Statistics.renderModuleStatsList _),
+      licenseInfo -> Def.task(rendering.LicenseInfo.render _))
 
   def ivyReportForConfig(config: Configuration) = inConfig(config)(
     Seq(
@@ -107,6 +107,7 @@ object DependencyGraphSettings {
 
       whatDependsOn := {
         val ArtifactPattern(org, name, versionFilter) = artifactPatternParser.parsed
+        val maxColumnSize = asciiGraphWidth.value
         val graph = moduleGraph.value
         val modules =
           versionFilter match {
@@ -116,7 +117,7 @@ object DependencyGraphSettings {
         val output =
           modules
             .map { module ⇒
-              rendering.AsciiTree.asciiTree(GraphTransformations.reverseGraphStartingAt(graph, module))
+              rendering.AsciiTree.asciiTree(GraphTransformations.reverseGraphStartingAt(graph, module), maxColumnSize)
             }
             .mkString("\n")
 
@@ -128,9 +129,9 @@ object DependencyGraphSettings {
       renderingAlternatives.flatMap((renderingTaskSettings _).tupled) ++
       AsciiGraph.asciiGraphSetttings)
 
-  def renderingTaskSettings(key: TaskKey[Unit], renderer: ModuleGraph ⇒ String): Seq[Setting[_]] =
+  def renderingTaskSettings(key: TaskKey[Unit], renderer: Def.Initialize[Task[ModuleGraph ⇒ String]]): Seq[Setting[_]] =
     Seq(
-      asString in key := renderer(moduleGraph.value),
+      asString in key := renderer.value(moduleGraph.value),
       printToConsole in key := streams.value.log.info((asString in key).value),
       toFile in key := {
         val (targetFile, force) = targetFileAndForceParser.parsed
