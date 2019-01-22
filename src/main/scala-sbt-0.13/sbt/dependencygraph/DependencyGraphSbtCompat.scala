@@ -14,10 +14,13 @@ object DependencyGraphSbtCompat {
   }
 
   object Settings {
+    private val sbtAsciiGraphWidth = "SBT_ASCII_GRAPH_WIDTH"
+
     val asciiGraphMaxColumnWidth = Def.setting(defaultColumnSize)
 
     private def defaultColumnSize: Int = {
-      val termWidth = SbtAccess.getTerminalWidth
+      val envAsciiWidth = sys.env.get(sbtAsciiGraphWidth)
+      val termWidth = envAsciiWidth.getOrElse(SbtAccess.getTerminalWidth)
       if (termWidth > 20) termWidth - 8
       else 80 // ignore termWidth
     }
